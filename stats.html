@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <!-- https://rawgit.com/patriciogonzalezvivo/glslCanvas/master/dist/GlslCanvas.js -->
+  <script type="text/javascript" src="./libs/GlslCanvas.js"></script>
+  <script src="./libs/stats.min.js"></script>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+    }
+
+    .noiseTexture {
+      height: 100vh;
+      position: relative;
+      width: 100vw;
+    }
+
+    .noiseTexture__canvas {
+      opacity: 0.2;
+      position: absolute;
+    }
+  </style>
+</head>
+<body>
+  <div class="noiseTexture">
+    <canvas id="js-noiseTextureCanvas" class="noiseTexture__canvas"></canvas>
+  </div>
+
+  <script type="text/javascript">
+    const canvas = document.getElementById('js-noiseTextureCanvas');
+
+    const handleResize = () => {
+      // 親要素にサイズを合わせる
+      const parent = canvas.parentNode;
+      canvas.height = parent.clientHeight;
+      canvas.width = parent.clientWidth;
+      // ウィンドウにサイズを合わせる
+      // canvas.height = window.innerHeight;
+      // canvas.width = window.innerWidth;
+    }
+
+    handleResize();
+    const sandbox = new GlslCanvas(canvas);
+    const string_frag_code = `
+      precision mediump float;
+      uniform float t;
+      float PHI = 1.61803398874989484820459;
+      float gold_noise(in vec2 xy, in float seed) {
+      return fract(tan(distance(xy*PHI, xy)*seed)*xy.x);
+      }
+      void main() {
+      vec2 uv = gl_FragCoord.xy;
+      gl_FragColor = vec4(gold_noise(uv, 0.1 + t), gold_noise(uv, 0.2 + t), gold_noise(uv, 0.3 + t), 1.0);
+      }
+    `;
+    sandbox.load(string_frag_code);
+    let lastTime = performance.now();
+    const animate = (now) => {
+      const elapsed = now - lastTime;
+      lastTime = now;
+      sandbox.setUniform('t', Math.random());
+      requestAnimationFrame(animate);
+    }
+    // stats.js で パフォーマンスをモニタリング
+    // requestAnimationFrame(animate);
+
+    window.addEventListener('resize', handleResize);
+
+    const initStats = () => {
+      const stats = new Stats();
+      stats.showPanel(0);
+      document.body.appendChild(stats.dom);
+
+      const tick = () => {
+        stats.begin();
+        requestAnimationFrame(animate);
+        stats.end();
+        requestAnimationFrame(tick);
+      }
+      tick();
+    }
+    initStats();
+  </script>
+</body>
+</html>
